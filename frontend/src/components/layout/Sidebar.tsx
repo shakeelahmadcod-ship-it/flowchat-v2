@@ -2,19 +2,26 @@
 
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter, usePathname } from "next/navigation";
-
-const navItems = [
-  { href: "/inbox", icon: "📥", label: "Inbox" },
-  { href: "/keywords", icon: "🔑", label: "Keywords" },
-  { href: "/broadcasts", icon: "📢", label: "Broadcasts" },
-  { href: "/analytics", icon: "📊", label: "Analytics" },
-  { href: "/settings", icon: "⚙️", label: "Settings" },
-];
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { data: analytics } = useAnalytics();
+
+  const navItems = [
+    {
+      href: "/inbox",
+      icon: "📥",
+      label: "Inbox",
+      badge: analytics?.unread_conversations || 0,
+    },
+    { href: "/keywords", icon: "🔑", label: "Keywords", badge: 0 },
+    { href: "/broadcasts", icon: "📢", label: "Broadcasts", badge: 0 },
+    { href: "/analytics", icon: "📊", label: "Analytics", badge: 0 },
+    { href: "/settings", icon: "⚙️", label: "Settings", badge: 0 },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -23,14 +30,17 @@ export default function Sidebar() {
 
   return (
     <div className="w-56 h-screen bg-slate-900 border-r border-slate-700/50 flex flex-col fixed left-0 top-0">
-      
+
       {/* Logo */}
       <div className="p-5 border-b border-slate-700/50">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white text-sm font-bold">F</span>
           </div>
-          <span className="text-white font-semibold">FlowChat</span>
+          <div>
+            <span className="text-white font-semibold text-sm">FlowChat</span>
+            <p className="text-slate-500 text-xs">v2.0</p>
+          </div>
         </div>
       </div>
 
@@ -42,14 +52,21 @@ export default function Sidebar() {
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 isActive
                   ? "bg-blue-600 text-white font-medium"
                   : "text-slate-400 hover:bg-slate-800 hover:text-white"
               }`}
             >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <div className="flex items-center gap-3">
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
+              {item.badge > 0 && (
+                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}
@@ -57,8 +74,8 @@ export default function Sidebar() {
 
       {/* User */}
       <div className="p-3 border-t border-slate-700/50">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+        <div className="flex items-center gap-3 px-3 py-2 mb-1">
+          <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
             {user?.full_name?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">

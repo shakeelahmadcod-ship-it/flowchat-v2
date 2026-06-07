@@ -1,15 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
-from app.api import auth, pages
+from app.api import auth, pages, keywords, messages, analytics, broadcasts
 import app.models
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="FlowChat API",
-    version="2.0.0",
-)
+app = FastAPI(title="FlowChat API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +18,10 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(pages.router)
+app.include_router(keywords.router)
+app.include_router(messages.router)
+app.include_router(analytics.router)
+app.include_router(broadcasts.router)
 
 @app.get("/")
 def root():
