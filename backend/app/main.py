@@ -14,6 +14,7 @@ app.add_middleware(
     allow_origins=[
         "https://flowchat-v2.vercel.app",
         "https://flowchat-v2.up.railway.app",
+        "https://flowchat-v2-production.up.railway.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
