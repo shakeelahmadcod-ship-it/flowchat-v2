@@ -58,9 +58,20 @@ export default function SettingsPage() {
     } catch (error: unknown) {
       let message = "Failed to connect pages.";
       if (typeof error === "object" && error !== null) {
-        const typedError = error as { response?: { data?: { detail?: string } } };
+        const typedError = error as {
+          response?: { data?: { detail?: string | { message?: string } } };
+          message?: string;
+        };
         if (typedError.response?.data?.detail) {
-          message = typedError.response.data.detail;
+          if (typeof typedError.response.data.detail === "string") {
+            message = typedError.response.data.detail;
+          } else if (typedError.response.data.detail.message) {
+            message = typedError.response.data.detail.message;
+          } else {
+            message = JSON.stringify(typedError.response.data.detail);
+          }
+        } else if (typedError.message) {
+          message = typedError.message;
         }
       }
       alert(message);

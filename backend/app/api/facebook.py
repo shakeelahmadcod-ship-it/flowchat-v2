@@ -130,6 +130,15 @@ def connect_managed_pages(
         if not page_data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Page {page_id} is not available")
 
+        if not page_data.get("access_token"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Missing page access token for page {page_id}. "
+                    "Reconnect Facebook and make sure the app has page permissions."
+                ),
+            )
+
         page = db.query(Page).filter(Page.fb_page_id == page_data["id"]).first()
         if not page:
             page = Page(
