@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from jose import jwt, JWTError
@@ -101,6 +101,20 @@ def fetch_facebook_user_profile(access_token: str) -> Dict[str, Any]:
     if "error" in response:
         raise ValueError(response["error"])
     return response
+
+
+def get_fb_user_profile(page_access_token: str, sender_id: str) -> Tuple[str, str]:
+    url = f"{GRAPH_BASE_URL}/{sender_id}"
+    params = {
+        "fields": "name,picture.width(200).height(200)",
+        "access_token": page_access_token
+    }
+    response = requests.get(url, params=params).json()
+    if "error" in response:
+        raise ValueError(response["error"])
+    name = response.get("name", "Unknown")
+    picture = response.get("picture", {}).get("data", {}).get("url", "")
+    return name, picture
 
 
 def fetch_managed_pages(access_token: str) -> List[Dict[str, Any]]:
