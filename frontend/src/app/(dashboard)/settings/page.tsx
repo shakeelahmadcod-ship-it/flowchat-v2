@@ -76,6 +76,10 @@ export default function SettingsPage() {
           message = typedError.message;
         }
       }
+      if (message === "Network Error") {
+        message =
+          "Network Error: check NEXT_PUBLIC_API_URL and make sure your backend is reachable over HTTPS.";
+      }
       alert(message);
     }
   };
