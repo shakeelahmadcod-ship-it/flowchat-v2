@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useConversations, useMessages, useSendReply } from "@/hooks/useMessages";
-import { useKeywords } from "@/hooks/useKeywords";
 
 export default function InboxPage() {
   const { data: conversations, isLoading } = useConversations();
-  const { data: keywords } = useKeywords();
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const { data: messages } = useMessages(activeConvId);
   const sendReply = useSendReply();
@@ -18,28 +16,14 @@ export default function InboxPage() {
   }, [messages]);
 
   const activeConv = conversations?.find((c) => c.id === activeConvId);
-  const quickReplySuggestion = useMemo(() => {
-    const shortcut = replyText.trim().toLowerCase();
-    if (!shortcut) return null;
 
-    return keywords
-      ?.filter((rule) => rule.is_active)
-      .find((rule) => rule.keyword.toLowerCase().startsWith(shortcut));
-  }, [keywords, replyText]);
-
-  const handleSend = async (messageText = replyText) => {
-    const textToSend = messageText.trim();
-    if (!textToSend || !activeConvId) return;
+  const handleSend = async () => {
+    if (!replyText.trim() || !activeConvId) return;
     await sendReply.mutateAsync({
       conversation_id: activeConvId,
-      message_text: textToSend,
+      message_text: replyText,
     });
     setReplyText("");
-  };
-
-  const handleQuickReplySend = async () => {
-    if (!quickReplySuggestion) return;
-    await handleSend(quickReplySuggestion.reply_text);
   };
 
   return (
@@ -153,50 +137,22 @@ export default function InboxPage() {
             </div>
 
             {/* Reply Box */}
-            <div className="p-4 bg-slate-900 border-t border-slate-700/50">
-              {quickReplySuggestion && (
-                <button
-                  type="button"
-                  onClick={handleQuickReplySend}
-                  disabled={sendReply.isPending}
-                  className="mb-3 w-full rounded-xl border border-blue-500/30 bg-blue-600/10 px-4 py-3 text-left transition-colors hover:bg-blue-600/20 disabled:opacity-60"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold uppercase text-blue-300">
-                      {quickReplySuggestion.keyword}
-                    </span>
-                    <span className="text-xs text-slate-400">Press Enter</span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-slate-100">
-                    {quickReplySuggestion.reply_text}
-                  </p>
-                </button>
-              )}
-              <div className="flex gap-3 items-center">
-                <input
-                  type="text"
-                  placeholder="Type a reply..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    if (quickReplySuggestion) {
-                      handleQuickReplySend();
-                      return;
-                    }
-                    handleSend();
-                  }}
-                  className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <button
-                  onClick={() => handleSend()}
-                  disabled={!replyText.trim() || sendReply.isPending}
-                  className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <span className="text-white text-sm">➤</span>
-                </button>
-              </div>
+            <div className="p-4 bg-slate-900 border-t border-slate-700/50 flex gap-3 items-center">
+              <input
+                type="text"
+                placeholder="Type a reply..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!replyText.trim() || sendReply.isPending}
+                className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-full flex items-center justify-center transition-colors"
+              >
+                <span className="text-white text-sm">➤</span>
+              </button>
             </div>
           </>
         )}
