@@ -19,5 +19,10 @@ class ConnectedPageResponse(BaseModel):
     category: Optional[str] = None
     picture_url: Optional[str] = None
 
+class FacebookStatusResponse(BaseModel):
+    is_connected: bool
+    fb_user_id: Optional[str] = None
+    name: Optional[str] = None
+
 class DisconnectPageResponse(BaseModel):
     message: str

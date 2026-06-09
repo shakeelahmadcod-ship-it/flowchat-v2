@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
-import { Page, ManagedPageItem } from "@/types";
+import { FacebookStatus, Page, ManagedPageItem } from "@/types";
 
 export function usePages() {
   return useQuery({
@@ -45,7 +45,19 @@ export function useConnectPages() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });
       queryClient.invalidateQueries({ queryKey: ["facebook-managed-pages"] });
+      queryClient.invalidateQueries({ queryKey: ["facebook-status"] });
     },
+  });
+}
+
+export function useFacebookStatus() {
+  return useQuery({
+    queryKey: ["facebook-status"],
+    queryFn: async () => {
+      const res = await api.get<FacebookStatus>("/facebook/status");
+      return res.data;
+    },
+    retry: false,
   });
 }
 

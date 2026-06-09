@@ -2,9 +2,11 @@ import axios from "axios";
 
 const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 const api = axios.create({
-  baseURL: rawBaseUrl
-    ? rawBaseUrl.replace(/^http:\/\//, "https://")
-    : "http://localhost:8000",
+  baseURL:
+    rawBaseUrl ||
+    (typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:8000"),
   headers: {
     "Content-Type": "application/json",
   },

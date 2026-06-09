@@ -29,6 +29,12 @@ export interface ManagedPageItem {
   picture_url?: string;
 }
 
+export interface FacebookStatus {
+  is_connected: boolean;
+  fb_user_id?: string;
+  name?: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;

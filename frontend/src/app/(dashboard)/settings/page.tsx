@@ -10,6 +10,7 @@ import {
   useManagedPages,
   useConnectPages,
   useDisconnectPage,
+  useFacebookStatus,
 } from "@/hooks/usePages";
 
 export default function SettingsPage() {
@@ -19,6 +20,7 @@ export default function SettingsPage() {
 
   const { user } = useAuthStore();
   const { data: pages, isLoading: pagesLoading } = usePages();
+  const { data: facebookStatus, isLoading: statusLoading } = useFacebookStatus();
   const facebookLogin = useFacebookLogin();
   const [showSelection, setShowSelection] = useState(() => fbAuthSuccess);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
@@ -112,22 +114,41 @@ export default function SettingsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleConnectFacebook}
-              disabled={facebookLogin.status === "pending"}
+              disabled={facebookLogin.status === "pending" || facebookStatus?.is_connected}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
             >
-              {facebookLogin.status === "pending" ? "Opening Facebook..." : "Connect Facebook"}
+              {facebookStatus?.is_connected
+                ? "Facebook connected"
+                : facebookLogin.status === "pending"
+                ? "Opening Facebook..."
+                : "Connect Facebook"}
             </button>
             <button
               onClick={() => {
                 setShowSelection(true);
                 managedPages.refetch();
               }}
-              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+              disabled={!facebookStatus?.is_connected}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
             >
               Select Pages
             </button>
           </div>
         </div>
+
+        {statusLoading ? (
+          <div className="rounded-xl border border-slate-600 bg-slate-900/50 p-4 text-slate-300 text-sm mb-4">
+            Checking Facebook connection...
+          </div>
+        ) : facebookStatus?.is_connected ? (
+          <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-green-100 text-sm mb-4">
+            Facebook is already connected as <span className="font-semibold">{facebookStatus.name}</span>. You can now select pages to connect.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-600 bg-slate-900/50 p-4 text-slate-300 text-sm mb-4">
+            No Facebook account connected yet. Click Connect Facebook first, then select pages.
+          </div>
+        )}
 
         {pagesLoading ? (
           <p className="text-slate-400 text-sm">Loading connected pages...</p>

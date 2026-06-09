@@ -11,7 +11,13 @@ from app.models.page import Page
 from app.models.facebook_account import FacebookAccount
 from app.models.page_connection import PageConnection
 from app.schemas.page import PageResponse
-from app.schemas.facebook import OAuthLoginResponse, ManagedPageItem, ConnectPagesRequest, DisconnectPageResponse
+from app.schemas.facebook import (
+    OAuthLoginResponse,
+    ManagedPageItem,
+    ConnectPagesRequest,
+    FacebookStatusResponse,
+    DisconnectPageResponse,
+)
 from app.services.facebook import (
     build_facebook_login_url,
     build_oauth_state,
@@ -32,6 +38,26 @@ def facebook_login(current_user: User = Depends(get_current_user)):
     state = build_oauth_state(current_user.id)
     url = build_facebook_login_url(state)
     return {"url": url}
+
+
+@router.get("/status", response_model=FacebookStatusResponse)
+def facebook_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    account = (
+        db.query(FacebookAccount)
+        .filter(FacebookAccount.user_id == current_user.id, FacebookAccount.is_active == True)
+        .first()
+    )
+    if not account:
+        return FacebookStatusResponse(is_connected=False)
+
+    return FacebookStatusResponse(
+        is_connected=True,
+        fb_user_id=account.fb_user_id,
+        name=account.name,
+    )
 
 
 @router.get("/callback")
