@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
-import { Page } from "@/types";
+import { Page, ManagedPageItem } from "@/types";
 
 export function usePages() {
   return useQuery({
@@ -12,28 +12,48 @@ export function usePages() {
   });
 }
 
-export function useAddPage() {
-  const queryClient = useQueryClient();
+export function useFacebookLogin() {
   return useMutation({
-    mutationFn: async (data: {
-      fb_page_id: string;
-      page_name: string;
-      access_token: string;
-    }) => {
-      const res = await api.post<Page>("/pages/", data);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pages"] });
+    mutationFn: async () => {
+      const res = await api.get<{ url: string }>("/facebook/login");
+      return res.data.url;
     },
   });
 }
 
-export function useDeletePage() {
+export function useManagedPages(enabled: boolean) {
+  return useQuery({
+    queryKey: ["facebook-managed-pages"],
+    queryFn: async () => {
+      const res = await api.get<ManagedPageItem[]>("/facebook/managed-pages");
+      return res.data;
+    },
+    enabled,
+    retry: false,
+  });
+}
+
+export function useConnectPages() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (pageIds: string[]) => {
+      const res = await api.post<Page[]>("/facebook/connect-pages", {
+        page_ids: pageIds,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: ["facebook-managed-pages"] });
+    },
+  });
+}
+
+export function useDisconnectPage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (pageId: string) => {
-      await api.delete(`/pages/${pageId}`);
+      await api.delete(`/facebook/disconnect/${pageId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });

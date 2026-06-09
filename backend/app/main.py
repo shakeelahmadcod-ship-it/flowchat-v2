@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
-from app.api import auth, pages, keywords, messages, analytics, broadcasts
+from app.api import auth, pages, facebook, keywords, messages, analytics, broadcasts
 import app.models
 
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(pages.router)
+app.include_router(facebook.router)
 app.include_router(keywords.router)
 app.include_router(messages.router)
 app.include_router(analytics.router)

@@ -1,0 +1,16 @@
+from sqlalchemy import Column, ForeignKey, String, DateTime, Boolean, Text
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+import uuid
+from app.core.database import Base
+
+class PageConnection(Base):
+    __tablename__ = "page_connections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    page_id = Column(UUID(as_uuid=True), ForeignKey("pages.id"), nullable=False)
+    page_access_token = Column(Text, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

@@ -1,31 +1,75 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
-import { usePages, useAddPage, useDeletePage } from "@/hooks/usePages";
-import { useState } from "react";
+import {
+  usePages,
+  useFacebookLogin,
+  useManagedPages,
+  useConnectPages,
+  useDisconnectPage,
+} from "@/hooks/usePages";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fbAuthSuccess = searchParams.get("fb_auth") === "success";
+
   const { user } = useAuthStore();
-  const { data: pages, isLoading } = usePages();
-  const addPage = useAddPage();
-  const deletePage = useDeletePage();
+  const { data: pages, isLoading: pagesLoading } = usePages();
+  const facebookLogin = useFacebookLogin();
+  const [showSelection, setShowSelection] = useState(() => fbAuthSuccess);
+  const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
+  const managedPages = useManagedPages(showSelection || !!fbAuthSuccess);
+  const connectPages = useConnectPages();
+  const disconnectPage = useDisconnectPage();
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    fb_page_id: "",
-    page_name: "",
-    access_token: "",
-  });
-
-  const handleAddPage = async () => {
-    if (!form.fb_page_id || !form.page_name || !form.access_token) return;
-    try {
-      await addPage.mutateAsync(form);
-      setForm({ fb_page_id: "", page_name: "", access_token: "" });
-      setShowForm(false);
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to add page");
+  useEffect(() => {
+    if (fbAuthSuccess) {
+      router.replace("/dashboard/settings");
     }
+  }, [fbAuthSuccess, router]);
+
+  const togglePageSelection = (pageId: string) => {
+    setSelectedPageIds((current) =>
+      current.includes(pageId)
+        ? current.filter((id) => id !== pageId)
+        : [...current, pageId]
+    );
+  };
+
+  const handleConnectFacebook = async () => {
+    try {
+      const url = await facebookLogin.mutateAsync();
+      window.location.href = url;
+    } catch {
+      alert("Unable to start Facebook connection. Please try again.");
+    }
+  };
+
+  const handleConnectPages = async () => {
+    if (selectedPageIds.length === 0) return;
+    try {
+      await connectPages.mutateAsync(selectedPageIds);
+      setSelectedPageIds([]);
+      setShowSelection(false);
+    } catch (error: unknown) {
+      let message = "Failed to connect pages.";
+      if (typeof error === "object" && error !== null) {
+        const typedError = error as { response?: { data?: { detail?: string } } };
+        if (typedError.response?.data?.detail) {
+          message = typedError.response.data.detail;
+        }
+      }
+      alert(message);
+    }
+  };
+
+  const handleDisconnectPage = async (pageId: string) => {
+    if (!confirm("Disconnect this page from FlowChat?")) return;
+    disconnectPage.mutate(pageId);
   };
 
   return (
@@ -35,7 +79,6 @@ export default function SettingsPage() {
         <p className="text-slate-400 text-sm mt-1">Manage your account and Facebook pages</p>
       </div>
 
-      {/* Profile Card */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl mb-6">
         <h3 className="text-white font-semibold mb-4">Profile Information</h3>
         <div className="flex items-center gap-4 mb-6">
@@ -49,80 +92,37 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Connected Pages */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-semibold">Connected Facebook Pages</h3>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-          >
-            + Add Page
-          </button>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Connected Facebook Pages</h3>
+            <p className="text-slate-400 text-sm mt-1">Use OAuth to connect and manage pages securely.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleConnectFacebook}
+              disabled={facebookLogin.status === "pending"}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {facebookLogin.status === "pending" ? "Opening Facebook..." : "Connect Facebook"}
+            </button>
+            <button
+              onClick={() => {
+                setShowSelection(true);
+                managedPages.refetch();
+              }}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+            >
+              Select Pages
+            </button>
+          </div>
         </div>
 
-        {/* Add Page Form */}
-        {showForm && (
-          <div className="bg-slate-700/50 rounded-lg p-4 mb-4 space-y-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Page Name</label>
-              <input
-                type="text"
-                placeholder="My Facebook Page"
-                value={form.page_name}
-                onChange={(e) => setForm({ ...form, page_name: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Page ID</label>
-              <input
-                type="text"
-                placeholder="123456789"
-                value={form.fb_page_id}
-                onChange={(e) => setForm({ ...form, fb_page_id: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Page Access Token</label>
-              <input
-                type="password"
-                placeholder="EAAxxxxxx..."
-                value={form.access_token}
-                onChange={(e) => setForm({ ...form, access_token: e.target.value })}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddPage}
-                disabled={addPage.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
-              >
-                {addPage.isPending ? "Adding..." : "Add Page"}
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className="bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Pages List */}
-        {isLoading ? (
-          <p className="text-slate-400 text-sm">Loading...</p>
-        ) : pages?.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            <p className="text-3xl mb-2">📄</p>
-            <p className="text-sm">No pages connected yet</p>
-          </div>
-        ) : (
+        {pagesLoading ? (
+          <p className="text-slate-400 text-sm">Loading connected pages...</p>
+        ) : pages?.length ? (
           <div className="space-y-3">
-            {pages?.map((page) => (
+            {pages.map((page) => (
               <div
                 key={page.id}
                 className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600"
@@ -136,25 +136,99 @@ export default function SettingsPage() {
                     <p className="text-slate-400 text-xs">ID: {page.fb_page_id}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1.5 text-xs text-green-400">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                    Connected
-                  </span>
-                  <button
-                    onClick={() => deletePage.mutate(page.id)}
-                    className="text-slate-400 hover:text-red-400 text-xs transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDisconnectPage(page.fb_page_id)}
+                  className="text-slate-400 hover:text-red-400 text-xs transition-colors"
+                >
+                  Disconnect
+                </button>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-400">
+            <p className="text-3xl mb-2">📄</p>
+            <p className="text-sm">No connected pages yet. Connect Facebook and select pages to get started.</p>
           </div>
         )}
       </div>
 
-      {/* Webhook Info */}
+      {showSelection && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-white font-semibold">Choose Pages to Connect</h3>
+              <p className="text-slate-400 text-sm mt-1">
+                Select the Facebook pages you want FlowChat to manage.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowSelection(false);
+                setSelectedPageIds([]);
+              }}
+              className="text-slate-400 hover:text-white text-sm"
+            >
+              Close
+            </button>
+          </div>
+
+          {managedPages.isLoading ? (
+            <p className="text-slate-400 text-sm">Fetching available pages...</p>
+          ) : managedPages.error ? (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              Unable to load Facebook pages. Make sure your account is connected and try again.
+            </div>
+          ) : managedPages.data?.length ? (
+            <div className="space-y-3 mb-4">
+              {managedPages.data.map((page) => (
+                <label
+                  key={page.id}
+                  className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPageIds.includes(page.id)}
+                    onChange={() => togglePageSelection(page.id)}
+                    className="h-4 w-4 rounded border-slate-500 text-blue-500 focus:ring-blue-400"
+                  />
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium">{page.name}</p>
+                    <p className="text-slate-400 text-xs">{page.category || "Facebook Page"}</p>
+                  </div>
+                  {page.picture_url ? (
+                    <img src={page.picture_url} alt={page.name} className="h-10 w-10 rounded-full object-cover" />
+                  ) : null}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-600 bg-slate-900/50 p-4 text-slate-300 text-sm">
+              No managed Facebook pages are available for this account.
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleConnectPages}
+              disabled={selectedPageIds.length === 0 || connectPages.status === "pending"}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {connectPages.status === "pending" ? "Connecting pages..." : "Connect Selected Pages"}
+            </button>
+            <button
+              onClick={() => {
+                setShowSelection(false);
+                setSelectedPageIds([]);
+              }}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl">
         <h3 className="text-white font-semibold mb-4">Webhook Configuration</h3>
         <div>

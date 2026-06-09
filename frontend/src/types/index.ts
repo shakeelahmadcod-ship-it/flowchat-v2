@@ -16,8 +16,17 @@ export interface Page {
   id: string;
   fb_page_id: string;
   page_name: string;
+  category?: string;
   profile_pic?: string;
   created_at: string;
+  updated_at: string;
+}
+
+export interface ManagedPageItem {
+  id: string;
+  name: string;
+  category?: string;
+  picture_url?: string;
 }
 
 export interface Message {

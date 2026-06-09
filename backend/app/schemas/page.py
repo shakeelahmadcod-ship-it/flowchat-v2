@@ -13,7 +13,7 @@ class PageResponse(BaseModel):
     id: UUID
     fb_page_id: str
     page_name: str
-    profile_pic: Optional[str]
+    profile_pic: Optional[str] = None
     created_at: datetime
 
     class Config:
