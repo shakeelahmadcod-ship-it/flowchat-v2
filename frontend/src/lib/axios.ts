@@ -1,35 +1,35 @@
 import axios from "axios";
 
 const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-const baseUrl = (() => {
-  if (rawBaseUrl) {
-    if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "https:" &&
-      rawBaseUrl.startsWith("http://")
-    ) {
-      const isLocalhost = /https?:\/\/(localhost|127\.0\.0\.1)/.test(rawBaseUrl);
-      if (!isLocalhost) {
-        return rawBaseUrl.replace(/^http:\/\//, "https://");
-      }
-      console.error(
-        "NEXT_PUBLIC_API_URL is insecure (http) while the app is loaded over HTTPS. Update it to https:// or use a secure backend host."
-      );
-    }
-    return rawBaseUrl;
-  }
+const isBrowser = typeof window !== "undefined";
+const host = isBrowser ? window.location.hostname : "";
+const isLocalhost = /(localhost|127\.0\.0\.1)/.test(host);
+const isSecureProtocol = isBrowser ? window.location.protocol === "https:" : false;
+const rawBaseUrlIsHttp = rawBaseUrl?.startsWith("http://") ?? false;
+const needsProtocolUpgrade =
+  Boolean(rawBaseUrlIsHttp) && isSecureProtocol && !/http:\/\/(localhost|127\.0\.0\.1)/.test(rawBaseUrl || "");
+const isVercelProduction = host === "flowchat-v2.vercel.app";
 
-  if (typeof window !== "undefined") {
-    if (window.location.protocol === "https:") {
-      console.error(
-        "NEXT_PUBLIC_API_URL is not set in production. API requests will use the frontend origin.",
-      );
-    }
-    return window.location.origin;
-  }
+const fallbackBackendUrl = isVercelProduction
+  ? "https://flowchat-v2-production.up.railway.app"
+  : undefined;
 
-  return "http://localhost:8000";
-})();
+const shouldUseFallbackBackend = !rawBaseUrl && isBrowser && isVercelProduction;
+
+export const apiUrlConfigWarning =
+  needsProtocolUpgrade && !fallbackBackendUrl
+    ? "NEXT_PUBLIC_API_URL is set to http:// while the app is loaded over HTTPS. Use https:// instead."
+    : undefined;
+
+const baseUrl = rawBaseUrl
+  ? needsProtocolUpgrade
+    ? rawBaseUrl.replace(/^http:\/\//, "https://")
+    : rawBaseUrl
+  : shouldUseFallbackBackend
+  ? fallbackBackendUrl
+  : isBrowser
+  ? window.location.origin
+  : "http://localhost:8000";
 
 const api = axios.create({
   baseURL: baseUrl,

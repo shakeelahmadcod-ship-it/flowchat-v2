@@ -12,6 +12,7 @@ import {
   useDisconnectPage,
   useFacebookStatus,
 } from "@/hooks/usePages";
+import { apiUrlConfigWarning } from "@/lib/axios";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -96,6 +97,12 @@ export default function SettingsPage() {
         <p className="text-slate-400 text-sm mt-1">Manage your account and Facebook pages</p>
       </div>
 
+      {apiUrlConfigWarning ? (
+        <div className="rounded-xl border border-yellow-400 bg-yellow-500/10 p-4 text-yellow-100 mb-6 max-w-2xl">
+          <p className="font-semibold">API configuration warning</p>
+          <p className="text-sm mt-1">{apiUrlConfigWarning}</p>
+        </div>
+      ) : null}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl mb-6">
         <h3 className="text-white font-semibold mb-4">Profile Information</h3>
         <div className="flex items-center gap-4 mb-6">
