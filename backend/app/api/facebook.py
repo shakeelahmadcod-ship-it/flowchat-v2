@@ -79,7 +79,7 @@ def facebook_callback(
 
     db.commit()
 
-    return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/settings?fb_auth=success")
+    return RedirectResponse(f"{settings.FRONTEND_URL}/settings?fb_auth=success")
 
 
 @router.get("/managed-pages", response_model=List[ManagedPageItem])

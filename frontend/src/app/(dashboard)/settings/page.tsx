@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (fbAuthSuccess) {
-      router.replace("/dashboard/settings");
+      router.replace("/settings");
     }
   }, [fbAuthSuccess, router]);
 
