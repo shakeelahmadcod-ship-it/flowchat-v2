@@ -13,3 +13,8 @@ venv/
 
 # IDE files
 .vscode/
+
+# Environment variables (local development only)
+.env
+.env.local
+.env.*.local
