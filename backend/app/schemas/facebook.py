@@ -1,28 +1,20 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+from typing import Optional
 
-class OAuthLoginResponse(BaseModel):
-    url: str
+class PageCreate(BaseModel):
+    fb_page_id: str
+    page_name: str
+    access_token: str
+    profile_pic: Optional[str] = None
 
-class ManagedPageItem(BaseModel):
-    id: str
-    name: str
-    category: Optional[str] = None
-    picture_url: Optional[str] = None
+class PageResponse(BaseModel):
+    id: UUID
+    fb_page_id: str
+    page_name: str
+    profile_pic: Optional[str] = None
+    created_at: datetime
 
-class ConnectPagesRequest(BaseModel):
-    page_ids: List[str]
-
-class ConnectedPageResponse(BaseModel):
-    id: str
-    name: str
-    category: Optional[str] = None
-    picture_url: Optional[str] = None
-
-class FacebookStatusResponse(BaseModel):
-    is_connected: bool
-    fb_user_id: Optional[str] = None
-    name: Optional[str] = None
-
-class DisconnectPageResponse(BaseModel):
-    message: str
+    class Config:
+        from_attributes = True
