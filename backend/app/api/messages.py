@@ -5,12 +5,12 @@ from app.core.deps import get_current_user
 from app.core.config import settings
 from app.models.user import User
 from app.models.page import Page
+from app.models.page_connection import PageConnection
 from app.models.message import Conversation, Message
 from app.models.keyword import KeywordRule
 from app.schemas.message import ConversationResponse, MessageResponse, ManualReplyRequest
 from app.services.facebook import send_facebook_message, get_fb_user_profile
 from typing import List
-import uuid
 
 router = APIRouter(tags=["Messages"])
 
@@ -37,11 +37,19 @@ async def handle_webhook(request: Request, db: Session = Depends(get_db)):
                     page_fb_id = event["recipient"]["id"]
                     message_text = event["message"]["text"]
 
-                    # Find page in DB
+                    # Find page
                     page = db.query(Page).filter(
                         Page.fb_page_id == page_fb_id
                     ).first()
                     if not page:
+                        continue
+
+                    # Get page access token from PageConnection
+                    connection = db.query(PageConnection).filter(
+                        PageConnection.page_id == page.id,
+                        PageConnection.is_active == True
+                    ).first()
+                    if not connection:
                         continue
 
                     # Get or create conversation
@@ -51,7 +59,13 @@ async def handle_webhook(request: Request, db: Session = Depends(get_db)):
                     ).first()
 
                     if not conv:
-                        name, pic = get_fb_user_profile(page.access_token, sender_id)
+                        try:
+                            name, pic = get_fb_user_profile(
+                                connection.page_access_token, sender_id
+                            )
+                        except:
+                            name, pic = "FB User", None
+
                         conv = Conversation(
                             page_id=page.id,
                             fb_sender_id=sender_id,
@@ -86,8 +100,11 @@ async def handle_webhook(request: Request, db: Session = Depends(get_db)):
                     reply_sent = False
                     for rule in rules:
                         if rule.keyword in message_text.lower():
-                            send_facebook_message(page.access_token, sender_id, rule.reply_text)
-                            # Save auto reply
+                            send_facebook_message(
+                                connection.page_access_token,
+                                sender_id,
+                                rule.reply_text
+                            )
                             db.add(Message(
                                 conversation_id=conv.id,
                                 sender_type="page",
@@ -99,7 +116,11 @@ async def handle_webhook(request: Request, db: Session = Depends(get_db)):
 
                     if not reply_sent:
                         default = "Thank you for reaching out! We'll get back to you shortly. 🙏"
-                        send_facebook_message(page.access_token, sender_id, default)
+                        send_facebook_message(
+                            connection.page_access_token,
+                            sender_id,
+                            default
+                        )
                         db.add(Message(
                             conversation_id=conv.id,
                             sender_type="page",
@@ -115,8 +136,16 @@ def get_conversations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    pages = db.query(Page).filter(Page.user_id == current_user.id).all()
-    page_ids = [p.id for p in pages]
+    # Get pages via PageConnection
+    connections = db.query(PageConnection).filter(
+        PageConnection.user_id == current_user.id,
+        PageConnection.is_active == True
+    ).all()
+    page_ids = [c.page_id for c in connections]
+
+    if not page_ids:
+        return []
+
     return db.query(Conversation).filter(
         Conversation.page_id.in_(page_ids)
     ).order_by(Conversation.updated_at.desc()).all()
@@ -143,10 +172,20 @@ def send_reply(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    page = db.query(Page).filter(Page.id == conv.page_id).first()
-    
-    send_facebook_message(page.access_token, conv.fb_sender_id, data.message_text)
-    
+    # Get access token from PageConnection
+    connection = db.query(PageConnection).filter(
+        PageConnection.page_id == conv.page_id,
+        PageConnection.is_active == True
+    ).first()
+    if not connection:
+        raise HTTPException(status_code=404, detail="Page connection not found")
+
+    send_facebook_message(
+        connection.page_access_token,
+        conv.fb_sender_id,
+        data.message_text
+    )
+
     msg = Message(
         conversation_id=conv.id,
         sender_type="page",
