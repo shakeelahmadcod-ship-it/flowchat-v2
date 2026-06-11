@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.keyword import KeywordRule
-from app.models.page import Page
+from app.models.page_connection import PageConnection
 from app.schemas.keyword import KeywordCreate, KeywordUpdate, KeywordResponse
 from typing import List
 
@@ -15,10 +15,15 @@ def get_keywords(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Get all pages for this user
-    user_pages = db.query(Page).filter(Page.user_id == current_user.id).all()
-    page_ids = [p.id for p in user_pages]
-    
+    connections = db.query(PageConnection).filter(
+        PageConnection.user_id == current_user.id,
+        PageConnection.is_active == True
+    ).all()
+    page_ids = [c.page_id for c in connections]
+
+    if not page_ids:
+        return []
+
     return db.query(KeywordRule).filter(
         KeywordRule.page_id.in_(page_ids)
     ).order_by(KeywordRule.created_at.desc()).all()
@@ -29,12 +34,12 @@ def create_keyword(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Verify page belongs to user
-    page = db.query(Page).filter(
-        Page.id == data.page_id,
-        Page.user_id == current_user.id
+    connection = db.query(PageConnection).filter(
+        PageConnection.page_id == data.page_id,
+        PageConnection.user_id == current_user.id,
+        PageConnection.is_active == True
     ).first()
-    if not page:
+    if not connection:
         raise HTTPException(status_code=404, detail="Page not found")
 
     rule = KeywordRule(
@@ -58,7 +63,7 @@ def update_keyword(
     rule = db.query(KeywordRule).filter(KeywordRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    
+
     rule.keyword = data.keyword.lower().strip()
     rule.reply_text = data.reply_text
     rule.is_active = data.is_active
