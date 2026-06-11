@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -11,4 +11,5 @@ class Page(Base):
     fb_page_id = Column(String, unique=True, index=True)
     page_name = Column(String)
     profile_pic = Column(String, nullable=True)
+    access_token = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
