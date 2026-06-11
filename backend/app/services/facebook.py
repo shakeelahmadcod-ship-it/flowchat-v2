@@ -141,7 +141,10 @@ def fetch_managed_pages(access_token: str) -> List[Dict[str, Any]]:
 
 def subscribe_page_to_webhook(page_id: str, page_access_token: str) -> None:
     url = f"{GRAPH_BASE_URL}/{page_id}/subscribed_apps"
-    params = {"access_token": page_access_token}
+    params = {
+        "access_token": page_access_token,
+        "subscribed_fields": "messages,messaging_postbacks,feed,message_deliveries,message_reads"
+    }
     response = requests.post(url, params=params).json()
     if not response.get("success"):
         raise ValueError(response.get("error", response))
