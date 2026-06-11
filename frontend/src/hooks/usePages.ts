@@ -15,7 +15,7 @@ export function usePages() {
 export function useFacebookLogin() {
   return useMutation({
     mutationFn: async () => {
-      const res = await api.get<{ url: string }>("/facebook/connect");
+      const res = await api.get<{ url: string }>("/facebook/login");
       return res.data.url;
     },
   });
